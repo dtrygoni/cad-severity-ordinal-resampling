@@ -13,7 +13,7 @@ This repository contains the R scripts and Python notebook for a study of how cl
 
 The three binary tasks are CAD presence (`CADP`, score > 0), CAD severity (`CADS`, score ≥ 23), and high CAD severity (`CADHS`, score ≥ 32). Each task compares logistic regression, k-nearest neighbors, a radial-kernel support vector machine, and random forest. The training conditions are the original class distribution (`orig`), random undersampling (`rus`), random oversampling (`ros`), Edited Nearest Neighbours (`enn`), SMOTE (`smote`), and SMOTE followed by ENN (`smote_enn`).
 
-The scripts evaluate held-out folds and include repeated 10-fold experiments. For the four-class evaluation, the pool-adjacent-violators algorithm makes the three cumulative probabilities nonincreasing. Differences between adjacent probabilities yield class probabilities, and the class with the highest probability is the prediction. Binary evaluation includes balanced accuracy and ROC AUC. Four-class evaluation includes macro balanced accuracy, macro recall, weighted kappa, and error in predicted class rank.
+The scripts evaluate held-out folds and include repeated 10-fold experiments. For the four-class evaluation, the pool-adjacent-violators algorithm makes the three cumulative probabilities nonincreasing. Differences between adjacent probabilities yield class probabilities, and the class with the highest probability is the prediction. Binary evaluation includes balanced accuracy and ROC AUC. Four-class evaluation includes macro balanced accuracy, macro recall, and mean absolute error in predicted class rank.
 
 ## Explore the saved results
 
