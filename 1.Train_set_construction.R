@@ -1,3 +1,4 @@
+rm(list=ls())
 ######### Code for train/set construction: 1. Train/Test splitting, 2. Univariate Filtering, 3. MissForest Imputation
 #### 4. Min-Max normalization, 5. Boruta Feature selection
 #### Two scenarios: One for CAD presence and One for CAD severity
@@ -51,9 +52,13 @@ Univariate_LR_filtering<-function(train,test,target_col,cols_to_exclude,LR_thres
               ))
   
 }
-missForestImputation_fnc<-function(train,test){
-  mm<-missForest(train)
+missForestImputation_fnc<-function(train,test,cols_target){
+  train_wanted<-train[-which(colnames(train) %in% cols_target)]
+  mm<-missForest(train_wanted)
   train_imputed<-mm$ximp
+  for(col in cols_target){
+    train_imputed[,col]<-train[,col]
+  }
   test_imputed<-missForestPredict(mm,newdata=test)
   
   return(list(Train=train_imputed,Test=test_imputed))
@@ -285,12 +290,13 @@ quality_controlSNP<-function(train,test,target,genetic_modelling='Optimal',HWE_t
 #Load the dataset
 load("./Data/Whole_dataset.Rda")
 
+full_dataset<-dataset[!is.na(dataset$SYNTAX.SCORE),]
 
 clinical_data<-full_dataset
 clinical_data<-clinical_data[!is.na(clinical_data$SYNTAX.SCORE),]
 clinical_data$SYNTAX.BINARY<-as.factor(ifelse(clinical_data$SYNTAX.SCORE>0,1,0))
-clinical_data$SYNTAX.SEVERITY<-as.factor(ifelse(clinical_data$SYNTAX.SCORE>23,1,0))
-clinical_data$SYNTAX.HIGH.SEVERITY<-as.factor(ifelse(clinical_data$SYNTAX.SCORE>32,1,0))
+clinical_data$SYNTAX.SEVERITY<-as.factor(ifelse(clinical_data$SYNTAX.SCORE>=23,1,0))
+clinical_data$SYNTAX.HIGH.SEVERITY<-as.factor(ifelse(clinical_data$SYNTAX.SCORE>=32,1,0))
 
 #Remove columns with more then 50% missing data
 data<-remove_NA_values(clinical_data)
@@ -307,68 +313,101 @@ for(jj in 1:10){
   print(jj)
   train_set<-data[-ids[[jj]],]
   test_set<-data[ids[[jj]],]
-  
+  target<-"SYNTAX.BINARY"
   ### 0. SNP QC ####
+  prep_start <- unname(proc.time()["elapsed"])
   res<-quality_controlSNP(train_set,test_set,target)
   train_set<-res$Train
   test_set<-res$Test
   
+  train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target))]
+  test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target))]
   
   ### 1. Univariate filtering
-  res<-Univariate_LR_filtering(train_set,test_set,target,c(target,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target)))
+  res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target,c(target,"SYNTAX.SCORE"))
   train_un<-res$Train_clinical
   test_un<-res$Test_clinical
-  
-  target1<-"SYNTAX.SEVERITY"
-  res<-Univariate_LR_filtering(train_set,test_set,target1,c(target1,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target1)))
-  train_un1<-res$Train_clinical
-  test_un1<-res$Test_clinical
-
-  target2<-"SYNTAX.HIGH.SEVERITY"
-  res<-Univariate_LR_filtering(train_set,test_set,target2,c(target2,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target2)))
-  train_un2<-res$Train_clinical
-  test_un2<-res$Test_clinical
-
-  train_un<-Test_set_preparation(list(train_un,train_un1,train_un2))
-  test_un<-Test_set_preparation(list(test_un,test_un1,test_un2))
-
-  
   ### 2. MissForest Predict (fit to train set and then transform test)
-  res<-missForestImputation_fnc(train_un,test_un)
+  res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target))
   train_imp<-res$Train
   test_imp<-res$Test
   ### 3. Min-Max Scaling
-  res<-Scaling_fnc(train_imp,test_imp,c(target,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target)))
+  res<-Scaling_fnc(train_imp,test_imp,c(target,"SYNTAX.SCORE"))
   train_scaled<-res$Train
   test_scaled<-res$Test
-  
   ### 4. Boruta FS
-  res<-Boruta_fnc(train_scaled,test_scaled,target,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target),option=2)
+  res<-Boruta_fnc(train_scaled,test_scaled,target,c("SYNTAX.SCORE"),option=2)
   train_set<-res$Train
   test_set<-res$Test
-  #train_set<-train_set[!colnames(train_set) %in% paste0(target,".1")]
-  #test_set<-test_set[!colnames(test_set) %in% paste0(target,".1")]
+  record_preparation(prep_start, "CADP", jj)
+  write.csv(train_set,row.names=FALSE,file=paste0("./Train_test_sets/Train_set_CADP_orig_",jj,".csv"))
+  write.csv(test_set,row.names=FALSE,file=paste0("./Train_test_sets/Test_set_CADP_orig_",jj,".csv"))
   
-  write.csv(train_set,row.names=FALSE,file=paste0("C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Train_set_CADP_orig_",jj,".csv"))
-  write.csv(test_set,row.names=FALSE,file=paste0("C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Test_set_CADP_orig_",jj,".csv"))
-  
+  prep_start <- unname(proc.time()["elapsed"])
   
   target1<-"SYNTAX.SEVERITY"
-  res1<-Boruta_fnc(train_scaled,test_scaled,target1,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target1),option=2)
-  train_set1<-res1$Train
-  test_set1<-res1$Test
+    ### 0. SNP QC ####
+  train_set<-data[-ids[[jj]],]
+  test_set<-data[ids[[jj]],]
+  res<-quality_controlSNP(train_set,test_set,target1)
+  train_set<-res$Train
+  test_set<-res$Test
+  
+  train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target1))]
+  test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target1))]
+  
+  ### 1. Univariate filtering
+  res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target1,c(target1,'SYNTAX.SCORE'))
+  train_un<-res$Train_clinical
+  test_un<-res$Test_clinical
+  ### 2. MissForest Predict (fit to train set and then transform test)
+  res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target1))
+  train_imp<-res$Train
+  test_imp<-res$Test
+  ### 3. Min-Max Scaling
+  res<-Scaling_fnc(train_imp,test_imp,c(target1,"SYNTAX.SCORE"))
+  train_scaled<-res$Train
+  test_scaled<-res$Test
+  ### 4. Boruta FS
+  res<-Boruta_fnc(train_scaled,test_scaled,target1,c("SYNTAX.SCORE"),option=2)
+  train_set1<-res$Train
+  test_set1<-res$Test
   #train_set1<-train_set1[!colnames(train_set1) %in% paste0(target1,".1")]
   #test_set1<-test_set1[!colnames(test_set1) %in% paste0(target1,".1")]
-
+  record_preparation(prep_start, "CADS", jj)
   write.csv(train_set1,row.names=FALSE,file=paste0("./Train_test_sets/Train_set_CADS_orig_",jj,".csv"))
   write.csv(test_set1,row.names=FALSE,file=paste0("./Train_test_sets/Test_set_CADS_orig_",jj,".csv"))
+  
+  
+  
+  prep_start <- unname(proc.time()["elapsed"])
+  target2<-"SYNTAX.HIGH.SEVERITY"
+  train_set<-data[-ids[[jj]],]
+  test_set<-data[ids[[jj]],]
+  res<-quality_controlSNP(train_set,test_set,target2)
+  train_set<-res$Train
+  test_set<-res$Test
+  
+  train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target2))]
+  test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target2))]
+  
+  ### 1. Univariate filtering
+  res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target2,c("SYNTAX.SCORE"))
+  train_un<-res$Train_clinical
+  test_un<-res$Test_clinical
+  ### 2. MissForest Predict (fit to train set and then transform test)
+  res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target2))
+  train_imp<-res$Train
+  test_imp<-res$Test
+  ### 3. Min-Max Scaling
+  res<-Scaling_fnc(train_imp,test_imp,c(target2,"SYNTAX.SCORE"))
+  train_scaled<-res$Train
+  test_scaled<-res$Test
 
-  res2<-Boruta_fnc(train_scaled,test_scaled,target2,setdiff(c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY"),target2),option=2)
+  res2<-Boruta_fnc(train_scaled,test_scaled,target2,c("SYNTAX.SCORE"),option=2)
   train_set2<-res2$Train
   test_set2<-res2$Test
-  #train_set2<-train_set2[!colnames(train_set2) %in% paste0(target2,".1")]
-  #test_set2<-test_set2[!colnames(test_set2) %in% paste0(target2,".1")]
-
+  record_preparation(prep_start, "CADHS", jj)
   write.csv(train_set2,row.names=FALSE,file=paste0("./Train_test_sets/Train_set_CADHS_orig_",jj,".csv"))
   write.csv(test_set2,row.names=FALSE,file=paste0("./Train_test_sets/Test_set_CADHS_orig_",jj,".csv"))
 
@@ -376,3 +415,146 @@ for(jj in 1:10){
 }
 
 
+
+################################## Repeat the experiment ----------- ###################
+for(rep in 1:10){
+  print(paste0("Iteraion: ",rep))
+  set.seed(rep)
+  ids<-createFolds(data$SYNTAX.BINARY,k=10,list=TRUE)
+  target<-"SYNTAX.BINARY"
+  #Cross validation sets
+  for(jj in 1:10){
+    print(jj)
+    train_set<-data[-ids[[jj]],]
+    test_set<-data[ids[[jj]],]
+    target<-"SYNTAX.BINARY"
+    ### 0. SNP QC ####
+    res<-quality_controlSNP(train_set,test_set,target)
+    train_set<-res$Train
+    test_set<-res$Test
+    
+    train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target))]
+    test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target))]
+    
+    ### 1. Univariate filtering
+    res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target,c(target,"SYNTAX.SCORE"))
+    train_un<-res$Train_clinical
+    test_un<-res$Test_clinical
+    ### 2. MissForest Predict (fit to train set and then transform test)
+    res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target))
+    train_imp<-res$Train
+    test_imp<-res$Test
+    ### 3. Min-Max Scaling
+    res<-Scaling_fnc(train_imp,test_imp,c(target,"SYNTAX.SCORE"))
+    train_scaled<-res$Train
+    test_scaled<-res$Test
+    ### 4. Boruta FS
+    res<-Boruta_fnc(train_scaled,test_scaled,target,c("SYNTAX.SCORE"),option=2)
+    train_set<-res$Train
+    test_set<-res$Test
+    write.csv(train_set,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Train_set_CADP_orig_",jj,".csv"))
+    write.csv(test_set,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Test_set_CADP_orig_",jj,".csv"))
+    
+    
+    target1<-"SYNTAX.SEVERITY"
+    ### 0. SNP QC ####
+    train_set<-data[-ids[[jj]],]
+    test_set<-data[ids[[jj]],]
+    res<-quality_controlSNP(train_set,test_set,target1)
+    train_set<-res$Train
+    test_set<-res$Test
+    
+    train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target1))]
+    test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target1))]
+    
+    ### 1. Univariate filtering
+    res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target1,c(target1,'SYNTAX.SCORE'))
+    train_un<-res$Train_clinical
+    test_un<-res$Test_clinical
+    ### 2. MissForest Predict (fit to train set and then transform test)
+    res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target1))
+    train_imp<-res$Train
+    test_imp<-res$Test
+    ### 3. Min-Max Scaling
+    res<-Scaling_fnc(train_imp,test_imp,c(target1,"SYNTAX.SCORE"))
+    train_scaled<-res$Train
+    test_scaled<-res$Test
+    ### 4. Boruta FS
+    res<-Boruta_fnc(train_scaled,test_scaled,target1,c("SYNTAX.SCORE"),option=2)
+    train_set1<-res$Train
+    test_set1<-res$Test
+    #train_set1<-train_set1[!colnames(train_set1) %in% paste0(target1,".1")]
+    #test_set1<-test_set1[!colnames(test_set1) %in% paste0(target1,".1")]
+    
+    write.csv(train_set1,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Train_set_CADS_orig_",jj,".csv"))
+    write.csv(test_set1,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Test_set_CADS_orig_",jj,".csv"))
+    
+    
+    
+    
+    target2<-"SYNTAX.HIGH.SEVERITY"
+    train_set<-data[-ids[[jj]],]
+    test_set<-data[ids[[jj]],]
+    res<-quality_controlSNP(train_set,test_set,target2)
+    train_set<-res$Train
+    test_set<-res$Test
+    
+    train_set_wanted<-train_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target2))]
+    test_set_wanted<-test_set[-which(colnames(train_set) %in% setdiff(c("SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY","SYNTAX.BINARY","Binary.SS",'SYNTAX.Tertiles'),target2))]
+    
+    ### 1. Univariate filtering
+    res<-Univariate_LR_filtering(train_set_wanted,test_set_wanted,target2,c("SYNTAX.SCORE"))
+    train_un<-res$Train_clinical
+    test_un<-res$Test_clinical
+    ### 2. MissForest Predict (fit to train set and then transform test)
+    res<-missForestImputation_fnc(train_un,test_un,cols_target=c("SYNTAX.SCORE",target2))
+    train_imp<-res$Train
+    test_imp<-res$Test
+    ### 3. Min-Max Scaling
+    res<-Scaling_fnc(train_imp,test_imp,c(target2,"SYNTAX.SCORE"))
+    train_scaled<-res$Train
+    test_scaled<-res$Test
+    
+    res2<-Boruta_fnc(train_imp,test_imp,target2,c("SYNTAX.SCORE"),option=2)
+    train_set2<-res2$Train
+    test_set2<-res2$Test
+    
+    write.csv(train_set2,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Train_set_CADHS_orig_",jj,".csv"))
+    write.csv(test_set2,row.names=FALSE,file=paste0("./Repeats/Rep",rep,"/Train_test_sets/Test_set_CADHS_orig_",jj,".csv"))
+    
+    
+  }
+}
+
+
+################################# Computation benchamark ################
+benchmark_dir <- paste0(
+  "./Code/",
+  "Computational_benchmark"
+)
+dir.create(benchmark_dir, recursive = TRUE, showWarnings = FALSE)
+preparation_log <- data.frame()
+
+record_preparation <- function(start_time, task, fold, repeat_id = 0L) {
+  preparation_log <<- rbind(
+    preparation_log,
+    data.frame(
+      Repeat = repeat_id,
+      Fold = fold,
+      Task = task,
+      Preparation_seconds = unname(
+        proc.time()["elapsed"] - start_time
+      )
+    )
+  )
+}
+write.csv(
+  preparation_log,
+  file.path(benchmark_dir, "preparation_times.csv"),
+  row.names = FALSE
+)
+
+capture.output(
+  sessionInfo(),
+  file = file.path(benchmark_dir, "R_session_preparation.txt")
+)

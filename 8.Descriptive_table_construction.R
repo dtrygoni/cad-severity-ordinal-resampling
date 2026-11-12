@@ -55,3 +55,47 @@ tab_sum <- summary(
 write2word(tab_sum, file = "./SYNTAX_resampling_suppl.docx")
 
 
+
+
+
+
+#################### Statistics::: Numerical
+
+d <- dataset_clinical[
+  complete.cases(dataset_clinical[, c("RATIO4", "CAD.Risk.Group")]),
+  c("RATIO4", "CAD.Risk.Group")
+]
+d$CAD.Risk.Group <- droplevels(d$CAD.Risk.Group)
+
+test_age <- kruskal.test(RATIO4 ~ CAD.Risk.Group, data = d)
+
+test_age
+test_age$statistic  # H
+test_age$parameter  # df
+test_age$p.value 
+
+
+
+
+
+
+############### Statistics::: Categorical
+d <- dataset_clinical[
+  complete.cases(dataset_clinical[, c("DIABETES MELLITUS", "CAD.Risk.Group")]),
+  c("DIABETES MELLITUS", "CAD.Risk.Group")
+]
+
+tab <- table(
+  droplevels(factor(d$`DIABETES MELLITUS`)),
+  droplevels(factor(d$CAD.Risk.Group))
+)
+
+test_sex <- chisq.test(tab, correct = FALSE)
+
+test_sex
+test_sex$statistic  # chi-square
+test_sex$parameter  # df
+test_sex$p.value    # p
+sum(tab)           # N για τον συγκεκριμένο έλεγχο
+
+test_sex$expected   # Αναμ

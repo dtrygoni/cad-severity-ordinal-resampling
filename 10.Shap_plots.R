@@ -6,10 +6,10 @@ library(shapviz)
 library(ggplot2)
 library(kernelshap)
 ### Load the data ###
-load("./Models/Models_CADP_whole.Rda")
-model<-Models_all$Fold1$rus$SVM
+load("./Models/Models_CADP.Rda")
+model<-Models_all$Fold4$enn$RF
 
-data<-read.csv("./Train_test_sets/Whole_set_CADP_rus_1.csv")
+data<-read.csv("./Train_new/Train_set_CADP_enn_4.csv")
 target<-"SYNTAX.BINARY"
 
 # IMPORTANT: return numeric vector (probability for ONE class)
@@ -19,7 +19,7 @@ pfun <- function(object, newdata) {
 set.seed(123)
 
 # Compute Shapley values
-X<-data[,-14]
+X<-data[,-13]
 shap<-kernelshap(object=model,
                  X=X,
                  pred_fun = pfun,
@@ -63,13 +63,11 @@ dev.off()
 
 
 
-
-
 ### Load the data ###
-load("./Models/Models_CADS_whole.Rda")
-model<-Models_all$Fold1$rus$SVM
+load("./Models/Models_CADS.Rda")
+model<-Models_all$Fold6$enn$SVM
 
-data<-read.csv("./Train_test_sets/Whole_set_CADS_rus_1.csv")
+data<-read.csv("./Train_test_sets/Train_set_CADS_enn_6.csv")
 target<-"SYNTAX.SEVERITY"
 
 # IMPORTANT: return numeric vector (probability for ONE class)
@@ -97,7 +95,11 @@ sv <- shapviz(shap)
 new_names <- c(
   "DIABETES.MELLITUS" = "DIABETES MELLITUS",
   "CRUSADE.SCORE" = "CRUSADE SCORE",
-  "CHEST.PAIN"="CHEST PAIN"
+  "CHEST.PAIN"="CHEST PAIN",
+  "PERIPHERAL.VASCULAR.DISEASE"="PERIPHERAL VASCULAR DISEASE",
+  "ATYPICAL.ANGINA.SYMPTOMS"="ATYPICAL ANGINA SYMPTOMS",
+  "ATRIAL.FIBRILLATION"="ATRIAL FIBRILLATION",
+  "NEU."="NEU%"
 )
 
 
@@ -112,7 +114,7 @@ p<-sv_importance(sv, kind = "bar") +
   )
 
 
-
+p
 library(tidyverse)
 tiff('./Desktop/Shap_CADS.jpeg',units="in",width=10,height=4,res=300)
 p
@@ -123,10 +125,10 @@ dev.off()
 
 
 ### Load the data ###
-load("./Models/Models_CADHS_whole.Rda")
-model<-Models_all$Fold1$rus$SVM
+load("./Models/Models_CADHS.Rda")
+model<-Models_all$Fold10$enn$SVM
 
-data<-read.csv("./Train_test_sets/Whole_set_CADHS_rus_1.csv")
+data<-read.csv("./Train_test_sets/Train_set_CADHS_enn_10.csv")
 target<-"SYNTAX.HIGH.SEVERITY"
 
 # IMPORTANT: return numeric vector (probability for ONE class)
@@ -136,7 +138,7 @@ pfun <- function(object, newdata) {
 set.seed(123)
 
 # Compute Shapley values
-X<-data[,-7]
+X<-data[,-8]
 shap<-kernelshap(object=model,
                  X=X,
                  pred_fun = pfun,

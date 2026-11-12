@@ -207,6 +207,10 @@ target<-"SYNTAX.BINARY"
 classifiers<-c("RF","SVM","kNN","LR")
 resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
 Models_all<-list()
+
+
+
+
 for(jj in 1:10){
   resamp_models<-list()
   for(resamp in resamplings){
@@ -362,3 +366,103 @@ for(jj in 1){
   Models_all[[paste0("Fold",jj)]]<-resamp_models
 }
 save(Models_all,file='./Models/Models_CADHS_whole.Rda')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################################### For the repeats ############################
+for(rep in 1:10){
+  print(paste0("Repeat :",rep))
+  setwd(paste0("./Repeats/Rep",rep))
+  
+  
+  
+  target<-"SYNTAX.BINARY"
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  Models_all<-list()
+  for(jj in 1:10){
+    resamp_models<-list()
+    for(resamp in resamplings){
+      data<-read.csv(paste0('./Train_test_sets/Train_set_CADP_',resamp,'_',jj,'.csv'))
+      data[,target]<-as.factor(data[,target])
+      data<-data[!colnames(data) %in% c("SYNTAX.SCORE","SYNTAX.SEVERITY","SYNTAX.HIGH.SEVERITY")]
+      
+      classifiers_list<-list()
+      for(classifier in classifiers){
+        m<-Model_training(data,target,model_selection = classifier)
+        model<-m$ClinicalModel
+        classifiers_list[[classifier]]<-model
+      }
+      
+      resamp_models[[resamp]]<-classifiers_list
+    }
+    Models_all[[paste0("Fold",jj)]]<-resamp_models
+  }
+  save(Models_all,file='./Models/Models_CADP.Rda')
+  
+  
+  # Model training for CAD severity 
+  target<-"SYNTAX.SEVERITY"
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  Models_all<-list()
+  for(jj in 1:10){
+    resamp_models<-list()
+    for(resamp in resamplings){
+      data<-read.csv(paste0('./Train_test_sets/Train_set_CADS_',resamp,'_',jj,'.csv'))
+      data<-data[!colnames(data) %in% c("SYNTAX.SCORE","SYNTAX.BINARY","SYNTAX.HIGH.SEVERITY")]
+      data[,target]<-as.factor(data[,target])
+      classifiers_list<-list()
+      for(classifier in classifiers){
+        m<-Model_training(data,target,model_selection = classifier)
+        model<-m$ClinicalModel
+        classifiers_list[[classifier]]<-model
+      }
+      
+      resamp_models[[resamp]]<-classifiers_list
+    }
+    Models_all[[paste0("Fold",jj)]]<-resamp_models
+  }
+  save(Models_all,file='./Models/Models_CADS.Rda')
+  
+  # Model training for CAD High Severity
+  target<-"SYNTAX.HIGH.SEVERITY"
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  Models_all<-list()
+  for(jj in 1:10){
+    resamp_models<-list()
+    for(resamp in resamplings){
+      data<-read.csv(paste0('./Train_test_sets/Train_set_CADHS_',resamp,'_',jj,'.csv'))
+      data<-data[!colnames(data) %in% c("SYNTAX.SCORE","SYNTAX.BINARY","SYNTAX.SEVERITY")]
+      data[,target]<-as.factor(data[,target])
+      classifiers_list<-list()
+      for(classifier in classifiers){
+        m<-Model_training(data,target,model_selection = classifier)
+        model<-m$ClinicalModel
+        classifiers_list[[classifier]]<-model
+      }
+      
+      resamp_models[[resamp]]<-classifiers_list
+    }
+    Models_all[[paste0("Fold",jj)]]<-resamp_models
+  }
+  save(Models_all,file='./Models/Models_CADHS.Rda')
+  
+  
+}

@@ -3,7 +3,7 @@
 library(reshape2)
 library(psych)
 library(ggplot2)
-library(ggExtra)
+#library(ggExtra)#
 library(ggthemes)
 library(lmerTest)
 library(lsmeans)
@@ -35,7 +35,7 @@ StatisticalComparison <- function (Dataset, Metric = "Balanced.Accuracy"){
     facet_wrap(.~Algorithm)+
     #scale_fill_viridis_d( option = "D", direction = -1)+  
     theme_bw()+
-    removeGrid(x=TRUE, y=TRUE)+
+    #removeGrid(x=TRUE, y=TRUE)+
     guides(fill = guide_legend(override.aes = list(alpha = 1,color="black")))+
     theme(legend.position="none",
           strip.text.x = element_text(size = 16, hjust = 0.5, vjust = 0.5, face = 'bold'),
@@ -288,79 +288,98 @@ StatisticalComparison <- function (Dataset, Metric = "Balanced.Accuracy"){
 
 
 ##### Load CADP  results ######
-load('./SK_ready_CADP_res.Rda')
+load('./Results/SK_ready_CADP_res.Rda')
+
 res_balAcc<-StatisticalComparison(dataset,Metric="Balanced.Accuracy")
 res_ROCAUC<-StatisticalComparison(dataset,Metric="ROC.AUC")
 res_Recall<-StatisticalComparison(dataset,Metric="Sensitivity")
 save(res_balAcc,file='./Results/ScottKnott/Scott_Knott_res_CADP_balAcc.Rda')
 save(res_ROCAUC,file='./Results/ScottKnott/Scott_Knott_res_CADP_ROCAUC.Rda')
-save(res_Recall,file='./Results/ScottKnott/Scott_Knott_res_CADP_Recall.Rda')
 
 ##### Load CADS  results ######
-load('./SK_ready_CADS_res.Rda')
+load('./Results/SK_ready_CADS_res.Rda')
 res_balAcc<-StatisticalComparison(dataset,Metric="Balanced.Accuracy")
 res_ROCAUC<-StatisticalComparison(dataset,Metric="ROC.AUC")
 res_Recall<-StatisticalComparison(dataset,Metric="Sensitivity")
 save(res_balAcc,file='./Results/ScottKnott/Scott_Knott_res_CADS_balAcc.Rda')
 save(res_ROCAUC,file='./Results/ScottKnott/Scott_Knott_res_CADS_ROCAUC.Rda')
-save(res_Recall,file='./Results/ScottKnott/Scott_Knott_res_CADS_Recall.Rda')
+#save(res_Recall,file='./Results/ScottKnott/Scott_Knott_res_CADS_Recall.Rda')
 
 ##### Load CADHS validation results ######
-load('./SK_ready_CADHS_res.Rda')
+load('./Results/SK_ready_CADHS_res.Rda')
 res_balAcc<-StatisticalComparison(dataset,Metric="Balanced.Accuracy")
 res_ROCAUC<-StatisticalComparison(dataset,Metric="ROC.AUC")
 res_Recall<-StatisticalComparison(dataset,Metric="Sensitivity")
+#res_Recall<-StatisticalComparison(dataset,Metric="Sensitivity")
 save(res_balAcc,file='./Results/ScottKnott/Scott_Knott_res_CADHS_balAcc.Rda')
 save(res_ROCAUC,file='./Results/ScottKnott/Scott_Knott_res_CADHS_ROCAUC.Rda')
-save(res_Recall,file='./Results/ScottKnott/Scott_Knott_res_CADHS_Recall.Rda')
+#save(res_Recall,file='./Results/ScottKnott/Scott_Knott_res_CADHS_Recall.Rda')
 
 
 ####### Load Multiclass results ###########
 
 
 
-
-load('./SK_ready_fourClass_res.Rda')
+#load("C:/Users/dtryg/Dropbox/Resampling_results/SK_ready_fourClass_res.Rda")
+load('./Results/SK_ready_fourClass_res_f.Rda')
 res_balAcc<-StatisticalComparison(dataset,Metric="Macro.BalancedAccuracy")
 res_Recall<-StatisticalComparison(dataset,Metric="Macro.Recall")
 res_kappa<-StatisticalComparison(dataset,Metric="Kappa2")
+
+res_rmse<-StatisticalComparison(dataset,Metric="MSE")
 save(res_balAcc,file='./Results/ScottKnott/Scott_Knott_Four_class_res_macrobalAcc.Rda')
 save(res_kappa,file='./Results/ScottKnott/Scott_Knott_Four_class_res_kappa.Rda')
 save(res_Recall,file='./Results/ScottKnott/Scott_Knott_Four_class_res_macroRecall.Rda')
 
 
+### MAE metrics ##
+res_mae<-StatisticalComparison(dataset,Metric="MAE")
+
+r<-res_mae$Groups.SK.Interaction
+r$Final<-paste0(round(r$Measure.Interaction,2),'[',
+                round(r$Lower.Interaction,2),'-',
+                round(r$Upper.Interaction,2),']')
+
+r[c("AlgorithmxTechnique.Interaction","Final","Cluster")]
 
 
+res_mae0<-StatisticalComparison(dataset,Metric="MAE.0")
+r<-res_mae0$Groups.SK.Interaction
+r$Final<-paste0(round(r$Measure.Interaction,2),'[',
+                round(r$Lower.Interaction,2),'-',
+                round(r$Upper.Interaction,2),']')
+
+r[c("AlgorithmxTechnique.Interaction","Final","Cluster")]
+
+res_mae1<-StatisticalComparison(dataset,Metric="MAE.1")
 
 
+r<-res_mae1$Groups.SK.Interaction
+r$Final<-paste0(round(r$Measure.Interaction,2),'[',
+                round(r$Lower.Interaction,2),'-',
+                round(r$Upper.Interaction,2),']')
+
+r[c("AlgorithmxTechnique.Interaction","Final","Cluster")]
 
 
+res_mae2<-StatisticalComparison(dataset,Metric="MAE.2")
 
 
+r<-res_mae2$Groups.SK.Interaction
+r$Final<-paste0(round(r$Measure.Interaction,2),'[',
+                round(r$Lower.Interaction,2),'-',
+                round(r$Upper.Interaction,2),']')
+
+r[c("AlgorithmxTechnique.Interaction","Final","Cluster")]
 
 
+res_mae3<-StatisticalComparison(dataset,Metric="MAE.3")
 
 
+r<-res_mae3$Groups.SK.Interaction
+r$Final<-paste0(round(r$Measure.Interaction,2),'[',
+                round(r$Lower.Interaction,2),'-',
+                round(r$Upper.Interaction,2),']')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+r[c("AlgorithmxTechnique.Interaction","Final","Cluster")]
 

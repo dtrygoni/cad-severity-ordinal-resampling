@@ -90,6 +90,10 @@ for(jj in 1:10){
 }
 res_presence<-res_all
 save(res_presence,file='./Results/Binary_CAD_presence.Rda')
+
+
+
+
 #2. CAD severity
 load('./Models/Models_CADS.Rda')
 res_all<-NULL
@@ -152,77 +156,81 @@ save(res_high_severity,file='./Results/Binary_CAD_high_severity.Rda')
 
 
 
-######################### Validation set performance ###############################
-#1. CAD presence
-load('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Models/Models_CADP.Rda')
-res_all<-NULL
-target_col<-'SYNTAX.BINARY'
-classifiers<-c("RF","SVM","kNN","LR")
-resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
-for(jj in 1:10){
-  test<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Validation_set_CADP_orig_',jj,'.csv'))
-  for(resamp in resamplings){
-    train<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Train_set_CADP_',resamp,'_',jj,'.csv'))
-    for(classifier in classifiers){
-      model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
-      res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
-      res$Resampling<-resamp
-      res$Fold<-jj
-      res$Classifier<-classifier
-      res_all<-rbind(res_all,res)
+############################################## For repeats #################################
+for(rep in 1:10){
+  print(rep)
+  #1. CAD presence
+  load(paste0('./Repeats/Rep',rep,'/Models/Models_CADP.Rda'))
+  res_all<-NULL
+  target_col<-'SYNTAX.BINARY'
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  for(jj in 1:10){
+    test<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Test_set_CADP_orig_',jj,'.csv'))
+    for(resamp in resamplings){
+      train<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Train_set_CADP_',resamp,'_',jj,'.csv'))
+      for(classifier in classifiers){
+        model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
+        res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
+        res$Resampling<-resamp
+        res$Fold<-jj
+        res$Classifier<-classifier
+        res_all<-rbind(res_all,res)
+      }
     }
   }
-}
-res_presence<-res_all
-save(res_presence,file='C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Results/Binary_CAD_presence_validation.Rda')
-#2. CAD severity
-load('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Models/Models_CADS.Rda')
-res_all<-NULL
-target_col<-'SYNTAX.SEVERITY'
-classifiers<-c("RF","SVM","kNN","LR")
-resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
-for(jj in 1:10){
-  test<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Validation_set_CADS_orig_',jj,'.csv'))
-  for(resamp in resamplings){
-    train<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Train_set_CADS_',resamp,'_',jj,'.csv'))
-    for(classifier in classifiers){
-      model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
-      res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
-      res$Resampling<-resamp
-      res$Fold<-jj
-      res$Classifier<-classifier
-      res_all<-rbind(res_all,res)
+  res_presence<-res_all
+  save(res_presence,file=paste0('./Repeats/Rep',rep,'/Results/Binary_CAD_presence.Rda'))
+  
+  
+  
+  
+  #2. CAD severity
+  load(paste0('./Repeats/Rep',rep,'/Models/Models_CADS.Rda'))
+  res_all<-NULL
+  target_col<-'SYNTAX.SEVERITY'
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  for(jj in 1:10){
+    test<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Test_set_CADS_orig_',jj,'.csv'))
+    for(resamp in resamplings){
+      train<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Train_set_CADS_',resamp,'_',jj,'.csv'))
+      for(classifier in classifiers){
+        model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
+        res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
+        res$Resampling<-resamp
+        res$Fold<-jj
+        res$Classifier<-classifier
+        res_all<-rbind(res_all,res)
+      }
     }
   }
-}
-res_severity<-res_all
-save(res_severity,file='C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Results/Binary_CAD_severity_validation.Rda')
-
-
-
-#3. CAD severity
-load('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Models/Models_CADHS.Rda')
-res_all<-NULL
-target_col<-'SYNTAX.HIGH.SEVERITY'
-classifiers<-c("RF","SVM","kNN","LR")
-resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
-for(jj in 1:10){
-  test<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Validation_set_CADHS_orig_',jj,'.csv'))
-  for(resamp in resamplings){
-    train<-read.csv(paste0('C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Train_test_sets/Train_set_CADHS_',resamp,'_',jj,'.csv'))
-    for(classifier in classifiers){
-      model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
-      res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
-      res$Resampling<-resamp
-      res$Fold<-jj
-      res$Classifier<-classifier
-      res_all<-rbind(res_all,res)
+  res_severity<-res_all
+  save(res_severity,file=paste0('./Repeats/Rep',rep,'/Results/Binary_CAD_severity.Rda'))
+  
+  
+  
+  #3. CAD severity
+  load(paste0('./Repeats/Rep',rep,'/Models/Models_CADHS.Rda'))
+  res_all<-NULL
+  target_col<-'SYNTAX.HIGH.SEVERITY'
+  classifiers<-c("RF","SVM","kNN","LR")
+  resamplings<-c("rus","ros","smote","smote_enn","orig","enn")
+  for(jj in 1:10){
+    test<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Test_set_CADHS_orig_',jj,'.csv'))
+    for(resamp in resamplings){
+      train<-read.csv(paste0('./Repeats/Rep',rep,'/Train_test_sets/Train_set_CADHS_',resamp,'_',jj,'.csv'))
+      for(classifier in classifiers){
+        model_wanted<-Models_all[[jj]][[resamp]][[classifier]]
+        res<-Evaluation_binary_fnc(model_wanted,test,target_col,train)
+        res$Resampling<-resamp
+        res$Fold<-jj
+        res$Classifier<-classifier
+        res_all<-rbind(res_all,res)
+      }
     }
   }
+  res_high_severity<-res_all
+  save(res_high_severity,file=paste0('./Repeats/Rep',rep,'/Results/Binary_CAD_high_severity.Rda'))
+  
 }
-res_high_severity<-res_all
-save(res_high_severity,file='C:/Users/30697/Dropbox/PhD/Working/Resampling/Code/Results/Binary_CAD_high_severity_validation.Rda')
-
-
-
-
