@@ -30,7 +30,7 @@ In R, load the four-class results and preview fold-level performance. This examp
 results <- new.env()
 load("Results/SK_ready_fourClass_res_f.Rda", envir = results)
 head(results$dataset[c("Algorithm", "Technique", "Fold",
-                       "Macro.BalancedAccuracy", "Kappa2")])
+                       "Macro.BalancedAccuracy")])
 ```
 
 | Saved files | Contents |
